@@ -1,0 +1,36 @@
+# Bật rewrite engine
+RewriteEngine On
+
+# CORS headers cho API
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
+
+# Bảo mật - Chặn truy cập file nhạy cảm
+<Files "*.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Cho phép truy cập stations.json qua API
+<Files "stations.json">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Cache control cho static files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+
+# Gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/javascript
+</IfModule> 

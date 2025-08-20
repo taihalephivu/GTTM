@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-Electric | Bản đồ trạm sạc xe điện Việt Nam</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #000000;
+            --secondary-color: #ffffff;
+            --accent-color: #ff6b35;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-light: #999999;
+            --border-color: #e5e5e5;
+            --background-light: #f8f9fa;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --sidebar-width: 320px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--secondary-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--primary-color);
+            color: var(--secondary-color);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+            z-index: 100;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,107,53,0.1) 0%, rgba(0,0,0,0.9) 100%);
+            z-index: 1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+
+        .header-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .header-stat {
+            text-align: center;
+        }
+
+        .header-stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            display: block;
+        }
+
+        .header-stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            height: calc(100vh - 140px);
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--secondary-color);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            transition: var(--transition);
+            z-index: 50;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--background-light);
+        }
+
+        .sidebar-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-toggle {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 60;
+        }
+
+        /* Controls Section */
+        .controls-section {
+            padding: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--secondary-color);
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+        }
+
+        .control-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        /* Search Suggestions */
+        .search-container {
+            position: relative;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--secondary-color);
+            border: 2px solid var(--accent-color);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: var(--shadow-hover);
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .suggestion-item:hover {
+            background: var(--background-light);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .suggestion-address {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Controls Actions */
+        .controls-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: var(--secondary-color);
+        }
+
+        .btn-primary:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-secondary {
+            background: var(--background-light);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: var(--background-light);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: var(--secondary-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            color: var(--secondary-color);
+            font-size: 1rem;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Map Section */
+        .map-section {
+            flex: 1;
+            position: relative;
+            background: var(--secondary-color);
+        }
+
+        .map-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--background-light);
+        }
+
+        .map-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .map-btn {
+            padding: 8px 16px;
+            background: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .map-btn:hover {
+            background: var(--primary-color);
+            color: var(--secondary-color);
+        }
+
+        #map {
+            height: calc(100% - 60px);
+            width: 100%;
+        }
+
+        /* Loading & Error States */
+        .loading, .error {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--secondary-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .loading-icon {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text, .error-text {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+
+        .error-text {
+            color: #dc2626;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 60vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+
+            .sidebar.collapsed {
+                max-height: 60px;
+                overflow: hidden;
+            }
+
+            .sidebar.collapsed .controls-section,
+            .sidebar.collapsed .stats-section {
+                display: none;
+            }
+
+            .map-section {
+                height: 60vh;
+            }
+
+            .header-content {
+                padding: 20px 15px;
+            }
+
+            .logo {
+                font-size: 2rem;
+            }
+
+            .header-subtitle {
+                font-size: 1rem;
+            }
+
+            .header-stats {
+                gap: 20px;
+            }
+
+            .header-stat-number {
+                font-size: 1.5rem;
+            }
+
+            .controls-actions {
+                flex-direction: column;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .map-header {
+                padding: 10px 15px;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .map-controls {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .controls-section {
+                padding: 15px;
+            }
+
+            .stats-section {
+                padding: 15px;
+            }
+
+            .map-section {
+                height: 50vh;
+            }
+        }
+
+        /* Custom Leaflet Styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .leaflet-popup-content {
+            margin: 15px;
+            font-family: inherit;
+        }
+
+        .leaflet-popup-tip {
+            background: var(--secondary-color);
+        }
+
+        /* Nearby Button */
+        .nearby-button {
+            background: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nearby-button:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+                 /* User Location Marker */
+         .user-marker {
+             background: #3b82f6 !important;
+             border: 3px solid var(--secondary-color) !important;
+         }
+
+        /* Scrollbar Styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--background-light);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="logo">V-ELECTRIC</h1>
+            <p class="header-subtitle">Hệ thống bản đồ trạm sạc xe điện thông minh</p>
+            
+            <div class="header-stats">
+                <div class="header-stat">
+                    <span class="header-stat-number" id="totalStations">0</span>
+                    <span class="header-stat-label">Tổng trạm</span>
+                </div>
+                <div class="header-stat">
+                    <span class="header-stat-number" id="activeStations">0</span>
+                    <span class="header-stat-label">Đang hoạt động</span>
+                </div>
+                <div class="header-stat">
+                    <span class="header-stat-number" id="inactiveStations">0</span>
+                    <span class="header-stat-label">Không hoạt động</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="control-group">
+                    <label class="control-label" for="searchInput">
+                        <i class="fas fa-search"></i> Tìm kiếm trạm
+                    </label>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" class="control-input" placeholder="Nhập tên trạm hoặc địa chỉ...">
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label" for="vehicleTypeFilter">
+                        <i class="fas fa-car"></i> Loại xe
+                    </label>
+                    <select id="vehicleTypeFilter" class="control-input control-select">
+                        <option value="">Tất cả loại xe</option>
+                        <option value="car">Ô tô điện</option>
+                        <option value="motorcycle">Xe máy điện</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label" for="provinceFilter">
+                        <i class="fas fa-map-marker-alt"></i> Tỉnh/Thành phố
+                    </label>
+                    <select id="provinceFilter" class="control-input control-select">
+                        <option value="">Tất cả tỉnh/thành</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label" for="districtFilter">
+                        <i class="fas fa-map"></i> Quận/Huyện
+                    </label>
+                    <select id="districtFilter" class="control-input control-select">
+                        <option value="">Tất cả quận/huyện</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label" for="statusFilter">
+                        <i class="fas fa-power-off"></i> Trạng thái
+                    </label>
+                    <select id="statusFilter" class="control-input control-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                        <option value="full">Đầy xe</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label" for="operatorFilter">
+                        <i class="fas fa-building"></i> Đơn vị vận hành
+                    </label>
+                    <select id="operatorFilter" class="control-input control-select">
+                        <option value="">Tất cả đơn vị</option>
+                    </select>
+                </div>
+                
+                <div class="controls-actions">
+                    <button class="btn btn-primary" onclick="searchStations()">
+                        <i class="fas fa-search"></i>
+                        Tìm kiếm
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearFilters()">
+                        <i class="fas fa-refresh"></i>
+                        Làm mới
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-charging-station"></i>
+                        </div>
+                        <div class="stat-number" id="totalStationsCard">0</div>
+                        <div class="stat-label">Tổng trạm</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-number" id="activeStationsCard">0</div>
+                        <div class="stat-label">Đang hoạt động</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-number" id="inactiveStationsCard">0</div>
+                        <div class="stat-label">Không hoạt động</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-map"></i>
+                        </div>
+                        <div class="stat-number" id="provincesCount">0</div>
+                        <div class="stat-label">Tỉnh/Thành</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Section -->
+        <section class="map-section">
+            <div class="map-header">
+                <h3 class="map-title">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Bản đồ trạm sạc xe điện
+                </h3>
+                <div class="map-controls">
+                    <button class="map-btn" onclick="findNearbyStations()">
+                        <i class="fas fa-location-arrow"></i>
+                        Tìm trạm gần nhất
+                    </button>
+                    <button class="map-btn" onclick="getUserLocation()">
+                        <i class="fas fa-crosshairs"></i>
+                        Vị trí của tôi
+                    </button>
+                    <button class="map-btn" onclick="clearFilters()">
+                        <i class="fas fa-eye"></i>
+                        Hiển thị tất cả
+                    </button>
+                </div>
+            </div>
+            <div id="map"></div>
+        </section>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading" style="display: none;">
+        <div class="loading-icon"></div>
+        <p class="loading-text">Đang tải dữ liệu trạm sạc...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="error" style="display: none;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #dc2626; margin-bottom: 20px;"></i>
+        <p class="error-text">Không thể tải dữ liệu. Vui lòng thử lại sau.</p>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="map.js"></script>
+</body>
+</html> 
